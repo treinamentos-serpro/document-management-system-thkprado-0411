@@ -50,7 +50,7 @@ test('exibe metadados e botão de download por documento escapando nomes', () =>
       id: '123',
       originalName: '<arquivo>.txt',
       size: 1024,
-      createdAt: '2026-11-04T12:00:00Z',
+      uploadedAt: '2026-11-04T12:00:00Z',
       owner: 'anonymous',
     }],
   });

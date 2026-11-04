@@ -19,15 +19,36 @@ app.use((error, req, res, next) => {
   }
 
   if (error instanceof multer.MulterError) {
-    return res.status(400).json({ error: 'Envie apenas um arquivo no campo file.' });
+    if (error.code === 'LIMIT_FILE_SIZE') {
+      return res.status(413).json({
+        error: { code: 'FILE_TOO_LARGE', message: 'O arquivo excede o limite de 10 MB.' },
+      });
+    }
+
+    return res.status(400).json({
+      error: { code: 'UNEXPECTED_FILE', message: 'Envie apenas um arquivo no campo file.' },
+    });
   }
 
   if (error.status === 400) {
-    return res.status(400).json({ error: 'Requisição inválida.' });
+    const code = req.path === '/upload' ? 'FILE_REQUIRED' : 'INVALID_REQUEST';
+    return res.status(400).json({
+      error: { code, message: 'Requisição inválida.' },
+    });
   }
 
   console.error('Erro ao processar documento:', error);
-  res.status(500).json({ error: 'Não foi possível processar a solicitação.' });
+  let code = 'INTERNAL_SERVER_ERROR';
+  if (req.path === '/upload') {
+    code = 'UPLOAD_FAILED';
+  } else if (req.path === '/documents') {
+    code = 'DOCUMENT_LIST_FAILED';
+  } else if (/^\/documents\/[^/]+\/download$/.test(req.path)) {
+    code = 'DOWNLOAD_FAILED';
+  }
+  res.status(500).json({
+    error: { code, message: 'Não foi possível processar a solicitação.' },
+  });
 });
 
 if (require.main === module) {

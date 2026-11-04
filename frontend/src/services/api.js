@@ -15,7 +15,7 @@ async function request(path, options) {
     const data = response.headers.get('content-type')?.includes('application/json')
       ? await response.json()
       : null;
-    throw new Error(data?.error || `A solicitação falhou (HTTP ${response.status}).`);
+    throw new Error(data?.error?.message || `A solicitação falhou (HTTP ${response.status}).`);
   }
 
   return response;
@@ -23,14 +23,16 @@ async function request(path, options) {
 
 export async function listDocuments(signal) {
   const response = await request('/documents', { signal });
-  return response.json();
+  const body = await response.json();
+  return body.data;
 }
 
 export async function uploadDocument(file) {
   const body = new FormData();
   body.append('file', file);
   const response = await request('/upload', { method: 'POST', body });
-  return response.json();
+  const result = await response.json();
+  return result.data;
 }
 
 export async function downloadDocument(id) {

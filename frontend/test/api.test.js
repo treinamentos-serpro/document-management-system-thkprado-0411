@@ -11,7 +11,7 @@ test('lista documentos via /api e encaminha o sinal de cancelamento', async () =
   const fetchMock = mock.method(globalThis, 'fetch', async (url, options) => {
     assert.equal(url, '/api/documents');
     assert.equal(options.signal, signal);
-    return Response.json(documents);
+    return Response.json({ data: documents });
   });
 
   assert.deepEqual(await listDocuments(signal), documents);
@@ -29,7 +29,7 @@ test('envia multipart com um arquivo no campo file sem definir Content-Type', as
     assert.deepEqual([...options.body.keys()], ['file']);
     assert.equal(options.body.get('file').name, file.name);
     assert.equal(await options.body.get('file').text(), 'conteúdo');
-    return Response.json(document, { status: 201 });
+    return Response.json({ data: document }, { status: 201 });
   });
 
   assert.deepEqual(await uploadDocument(file), document);
@@ -49,7 +49,9 @@ test('baixa bytes via /api com ID codificado', async () => {
 
 test('propaga a mensagem de erro do backend em todas as operações', async () => {
   mock.method(globalThis, 'fetch', async () =>
-    Response.json({ error: 'Erro informado pelo backend.' }, { status: 400 }));
+    Response.json({
+      error: { code: 'INVALID_DOCUMENT_ID', message: 'Erro informado pelo backend.' },
+    }, { status: 400 }));
 
   for (const operation of [
     () => listDocuments(),
