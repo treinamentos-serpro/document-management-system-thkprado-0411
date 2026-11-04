@@ -1,10 +1,9 @@
 ---
-description: Gera testes com node:test para um módulo do backend.
 name: gerar-testes
+description: "Gera testes com node:test para um módulo do backend."
+disable-model-invocation: true
 argument-hint: caminho do modulo (ex. backend/src/services/documents.service.js)
-agent: agent
 ---
-
 # Gerar testes do backend
 
 Gere testes automatizados para o módulo `${input:modulo:caminho do modulo}` usando o runner nativo `node:test` e `node:assert`.

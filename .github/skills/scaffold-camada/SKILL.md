@@ -1,10 +1,9 @@
 ---
-description: Cria uma camada completa do backend (route, controller, service, repository) para um recurso.
 name: scaffold-camada
+description: "Cria uma camada completa do backend (route, controller, service, repository) para um recurso."
+disable-model-invocation: true
 argument-hint: nome do recurso (ex. documents)
-agent: agent
 ---
-
 # Scaffold de camada do backend
 
 Crie a estrutura completa de uma camada para o recurso `${input:recurso:nome do recurso}` seguindo a Clean Architecture simples do projeto.

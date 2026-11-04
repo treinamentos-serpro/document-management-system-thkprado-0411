@@ -227,3 +227,45 @@ test('usa o owner configurado e ordena por data decrescente com ID como desempat
     documentRepository.findAll = originalFindAll;
   }
 });
+
+test('oculta documentos de outros owners na consulta e na listagem', () => {
+  const previousOwner = process.env.DMS_DEFAULT_OWNER;
+  const originalFindAll = documentRepository.findAll;
+  const originalFindById = documentRepository.findById;
+  process.env.DMS_DEFAULT_OWNER = 'configured-user';
+
+  const ownedDocument = {
+    id: 'owned',
+    owner: 'configured-user',
+    uploadedAt: '2026-01-01T00:00:00.000Z',
+    path: path.join(storageDirectory, 'owned'),
+  };
+  const foreignDocument = {
+    id: 'foreign',
+    owner: 'other-user',
+    uploadedAt: '2026-01-02T00:00:00.000Z',
+    path: path.join(storageDirectory, 'foreign'),
+  };
+  documentRepository.findAll = () => [ownedDocument, foreignDocument];
+  documentRepository.findById = (id) => (
+    id === foreignDocument.id ? foreignDocument : ownedDocument
+  );
+
+  try {
+    assert.deepEqual(documentService.listDocuments(), [{
+      id: ownedDocument.id,
+      owner: ownedDocument.owner,
+      uploadedAt: ownedDocument.uploadedAt,
+    }]);
+    assert.equal(documentService.getDocument(foreignDocument.id), undefined);
+    assert.equal(documentService.getDocument(ownedDocument.id), ownedDocument);
+  } finally {
+    documentRepository.findAll = originalFindAll;
+    documentRepository.findById = originalFindById;
+    if (previousOwner === undefined) {
+      delete process.env.DMS_DEFAULT_OWNER;
+    } else {
+      process.env.DMS_DEFAULT_OWNER = previousOwner;
+    }
+  }
+});
