@@ -1,6 +1,9 @@
 const { randomUUID } = require('node:crypto');
 const { unlink } = require('node:fs/promises');
+const path = require('node:path');
 const documentRepository = require('../repositories/documentRepository');
+
+const storageDirectory = path.resolve(__dirname, '../../storage');
 
 function toMetadata(document) {
   const { path, ...metadata } = document;
@@ -20,7 +23,10 @@ async function createDocument(file) {
 
     return toMetadata(document);
   } catch (error) {
-    await unlink(file.path).catch(() => {});
+    const filePath = path.resolve(file.path);
+    if (filePath.startsWith(`${storageDirectory}${path.sep}`)) {
+      await unlink(filePath).catch(() => {});
+    }
     throw error;
   }
 }

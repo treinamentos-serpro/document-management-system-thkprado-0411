@@ -23,7 +23,9 @@ after(async () => {
     server.close((error) => error ? reject(error) : resolve());
     server.closeIdleConnections();
   });
-  await Promise.all(Array.from(uploadedPaths, (filePath) => unlink(filePath)));
+  await Promise.all(Array.from(uploadedPaths, (filePath) => (
+    unlink(path.join(storageDirectory, path.basename(filePath)))
+  )));
 });
 
 async function uploadFile(content, name = 'documento.txt') {
@@ -135,6 +137,28 @@ test('retorna 404 quando o arquivo físico não existe mais', async () => {
   assert.deepEqual(await response.json(), {
     error: { code: 'DOCUMENT_NOT_FOUND', message: 'Documento não encontrado.' },
   });
+});
+
+test('não baixa um documento com caminho fora do armazenamento local', async () => {
+  const originalFindById = documentRepository.findById;
+  documentRepository.findById = (id) => ({
+    id,
+    owner: 'demo-user',
+    originalName: 'fora.txt',
+    path: path.resolve(storageDirectory, '../fora.txt'),
+  });
+
+  try {
+    const response = await fetch(
+      `${baseUrl}/documents/41fc50f6-59ab-4c3f-a5cf-a63a729c570a/download`,
+    );
+    assert.equal(response.status, 500);
+    assert.deepEqual(await response.json(), {
+      error: { code: 'DOWNLOAD_FAILED', message: 'Não foi possível processar a solicitação.' },
+    });
+  } finally {
+    documentRepository.findById = originalFindById;
+  }
 });
 
 test('rejeita arquivos maiores que 10 MiB com erro 413', async () => {
