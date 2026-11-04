@@ -1,13 +1,14 @@
 const { randomUUID } = require('node:crypto');
-const { unlink } = require('node:fs/promises');
-const path = require('node:path');
 const documentRepository = require('../repositories/documentRepository');
-
-const storageDirectory = path.resolve(__dirname, '../../storage');
+const documentStorageService = require('./documentStorageService');
 
 function toMetadata(document) {
   const { path, ...metadata } = document;
   return metadata;
+}
+
+function getCurrentOwner() {
+  return process.env.DMS_DEFAULT_OWNER || 'demo-user';
 }
 
 async function createDocument(file) {
@@ -17,15 +18,20 @@ async function createDocument(file) {
       originalName: file.originalname,
       size: file.size,
       uploadedAt: new Date().toISOString(),
-      owner: process.env.DMS_DEFAULT_OWNER || 'demo-user',
+      owner: getCurrentOwner(),
       path: file.path,
     });
 
     return toMetadata(document);
   } catch (error) {
-    const filePath = path.resolve(file.path);
-    if (filePath.startsWith(`${storageDirectory}${path.sep}`)) {
-      await unlink(filePath).catch(() => {});
+    try {
+      await documentStorageService.removeUploadedFile(file.path);
+    } catch (cleanupError) {
+      throw new AggregateError(
+        [error, cleanupError],
+        'Não foi possível registrar o documento nem remover o arquivo enviado.',
+        { cause: error },
+      );
     }
     throw error;
   }
@@ -33,7 +39,7 @@ async function createDocument(file) {
 
 function listDocuments() {
   return documentRepository.findAll()
-    .filter((document) => document.owner === (process.env.DMS_DEFAULT_OWNER || 'demo-user'))
+    .filter((document) => document.owner === getCurrentOwner())
     .sort((first, second) => (
       second.uploadedAt.localeCompare(first.uploadedAt) || first.id.localeCompare(second.id)
     ))
@@ -42,7 +48,7 @@ function listDocuments() {
 
 function getDocument(id) {
   const document = documentRepository.findById(id);
-  return document?.owner === (process.env.DMS_DEFAULT_OWNER || 'demo-user')
+  return document?.owner === getCurrentOwner()
     ? document
     : undefined;
 }

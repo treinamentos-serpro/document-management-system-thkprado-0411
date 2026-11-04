@@ -1,7 +1,5 @@
-const path = require('node:path');
 const documentService = require('../services/documentService');
-
-const storageDirectory = path.resolve(__dirname, '../../storage');
+const documentStorageService = require('../services/documentStorageService');
 
 async function uploadDocument(req, res) {
   if (!req.file) {
@@ -31,9 +29,11 @@ function downloadDocument(req, res, next) {
     });
   }
 
-  const filePath = path.resolve(document.path);
-  if (!filePath.startsWith(`${storageDirectory}${path.sep}`)) {
-    return next(new Error('Caminho de armazenamento inválido.'));
+  let filePath;
+  try {
+    filePath = documentStorageService.resolveStoredPath(document.path);
+  } catch (error) {
+    return next(error);
   }
 
   res.set('X-Content-Type-Options', 'nosniff');
