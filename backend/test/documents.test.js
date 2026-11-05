@@ -269,3 +269,39 @@ test('oculta documentos de outros owners na consulta e na listagem', () => {
     }
   }
 });
+
+test('isola uploads, listagem e downloads por owner via HTTP', async () => {
+  const previousOwner = process.env.DMS_DEFAULT_OWNER;
+
+  try {
+    process.env.DMS_DEFAULT_OWNER = 'http-owner-a';
+    const first = await uploadFile('documento do primeiro owner');
+    assert.equal(first.document.owner, 'http-owner-a');
+
+    process.env.DMS_DEFAULT_OWNER = 'http-owner-b';
+    const second = await uploadFile('documento do segundo owner');
+    assert.equal(second.document.owner, 'http-owner-b');
+
+    const listing = await fetch(`${baseUrl}/documents`);
+    assert.equal(listing.status, 200);
+    assert.deepEqual(await listing.json(), { data: [second.document] });
+
+    const forbiddenDownload = await fetch(
+      `${baseUrl}/documents/${first.document.id}/download`,
+    );
+    assert.equal(forbiddenDownload.status, 404);
+    assert.deepEqual(await forbiddenDownload.json(), {
+      error: { code: 'DOCUMENT_NOT_FOUND', message: 'Documento não encontrado.' },
+    });
+
+    const download = await fetch(`${baseUrl}/documents/${second.document.id}/download`);
+    assert.equal(download.status, 200);
+    assert.equal(await download.text(), 'documento do segundo owner');
+  } finally {
+    if (previousOwner === undefined) {
+      delete process.env.DMS_DEFAULT_OWNER;
+    } else {
+      process.env.DMS_DEFAULT_OWNER = previousOwner;
+    }
+  }
+});
